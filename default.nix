@@ -2,14 +2,11 @@
 # Copyright (C) 2023 Archit Gupta <archit@accelbread.com>
 # SPDX-License-Identifier: MIT
 
-defaultInputs: src: inputs: root:
-let
-  inputs' = defaultInputs // inputs;
-in
-{
-  withOverlay = _: prev: {
-    zig = inputs'.zig-overlay.packages.${prev.system}.master;
-    zls = inputs'.zls.packages.${prev.system}.default;
+localInputs: { src, root }: {
+  inputs = { inherit (localInputs) zig-overlay zls; };
+  withOverlay = _: { flakelite, ... }: {
+    zig = flakelite.inputs'.zig-overlay.packages.master;
+    zls = flakelite.inputs'.zls.packages.default;
   };
   package = { stdenvNoCC, zig, lib, system, flakelite }:
     stdenvNoCC.mkDerivation {
@@ -27,11 +24,9 @@ in
       '';
       inherit (flakelite) meta;
     };
-  devTools = { zls, zig, ... }: [ zls zig ];
-  checks = { lib, zig, ... }: {
+  devTools = { zls, zig }@tools: builtins.attrValues tools;
+  checks = { lib, zig }: {
     test = "HOME=$TMPDIR ${lib.getExe zig} build test";
   };
-  formatters = {
-    "*.zig" = "zig fmt";
-  };
+  formatters."*.zig" = "zig fmt";
 }

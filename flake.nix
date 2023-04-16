@@ -15,7 +15,7 @@
     };
   };
   outputs = { flakelite, ... }@inputs:
-    flakelite.lib.mkFlake ./. inputs {
+    flakelite.lib.mkFlake ./. {
       outputs.flakeliteModule = import ./. inputs;
     };
 }
