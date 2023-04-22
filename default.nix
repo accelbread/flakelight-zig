@@ -4,9 +4,9 @@
 
 localInputs: { src, root }: {
   inputs = { inherit (localInputs) zig-overlay zls; };
-  withOverlay = _: { flakelite, ... }: {
-    zig = flakelite.inputs'.zig-overlay.packages.master;
-    zls = flakelite.inputs'.zls.packages.default;
+  withOverlay = { inputs', ... }: _: {
+    zig = inputs'.zig-overlay.packages.master;
+    zls = inputs'.zls.packages.default;
   };
   package = { stdenvNoCC, zig, lib, system, flakelite }:
     stdenvNoCC.mkDerivation {
