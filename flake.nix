@@ -6,5 +6,6 @@
   inputs.flakelight.url = "github:accelbread/flakelight";
   outputs = { flakelight, ... }: flakelight ./. {
     flakelightModule = ./flakelight-zig.nix;
+    templates = import ./templates;
   };
 }
