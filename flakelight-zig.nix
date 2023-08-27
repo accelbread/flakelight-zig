@@ -33,7 +33,7 @@ in
 
     devShell.packages = pkgs: with pkgs; [ zig zls ];
 
-    checks.test = pkgs: "HOME=$TMPDIR ${lib.getExe pkgs.zig} build test";
+    checks.test = pkgs: "HOME=$TMPDIR ${pkgs.zig}/bin/zig build test";
 
     formatters."*.zig" = "zig fmt";
   };
