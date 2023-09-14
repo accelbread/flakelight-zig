@@ -24,12 +24,8 @@ Configures `zig` files to be formatted with `zig fmt`.
 
 ```nix
 {
-  inputs = {
-    flakelight.url = "github:accelbread/flakelight";
-    flakelight-zig.url = "github:accelbread/flakelight-zig";
-  };
-  outputs = { flakelight, flakelight-zig, ... }: flakelight ./. {
-    imports = [ flakelight-zig.flakelightModules.default ];
+  inputs.flakelight-zig.url = "github:accelbread/flakelight-zig";
+  outputs = { flakelight-zig, ... }: flakelight-zig ./. {
     name = "hello-world";
     version = "0.0.1";
     description = "My Zig application.";
