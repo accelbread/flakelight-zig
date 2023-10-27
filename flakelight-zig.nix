@@ -19,6 +19,7 @@ in
         version = config.version;
         inherit src;
         nativeBuildInputs = [ zig ];
+        strictDeps = true;
         dontConfigure = true;
         dontInstall = true;
         XDG_CACHE_HOME = ".cache";
