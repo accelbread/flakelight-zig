@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 {
-  inputs.flakelight.url = "github:accelbread/flakelight";
+  inputs.flakelight.url = "github:nix-community/flakelight";
   outputs = { flakelight, ... }: flakelight ./. {
     imports = [ flakelight.flakelightModules.flakelightModule ];
     flakelightModule = ./flakelight-zig.nix;

@@ -2,7 +2,7 @@
 
 Zig module for [flakelight][1].
 
-[1]: https://github.com/accelbread/flakelight
+[1]: https://github.com/nix-community/flakelight
 
 ## Additional options
 
