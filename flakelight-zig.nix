@@ -4,19 +4,18 @@
 
 { config, lib, src, ... }:
 let
-  inherit (lib) mkOption types;
+  inherit (lib) assertMsg mkOption types;
 in
 {
-  options = {
-    name = mkOption { type = types.str; };
-    version = mkOption { type = types.str; };
-  };
+  options.version = mkOption { type = types.str; };
 
   config = {
-    package = { stdenvNoCC, zig, defaultMeta }:
+    package =
+      assert assertMsg (config.pname != null)
+        "pname option must be set in flakelight config.";
+      { stdenvNoCC, zig, defaultMeta }:
       stdenvNoCC.mkDerivation {
-        pname = config.name;
-        version = config.version;
+        inherit (config) pname version;
         inherit src;
         nativeBuildInputs = [ zig ];
         strictDeps = true;

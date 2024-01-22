@@ -7,7 +7,7 @@
   outputs = { flakelight-zig, ... }@inputs:
     flakelight-zig ./. {
       inherit inputs;
-      name = "hello-world";
+      pname = "hello-world";
       version = "0.0.1";
       license = "AGPL-3.0-or-later";
     };

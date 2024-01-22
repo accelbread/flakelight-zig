@@ -4,9 +4,9 @@ Zig module for [flakelight][1].
 
 [1]: https://github.com/nix-community/flakelight
 
-## Additional options
+## Required options
 
-Set `name` to the name of the Zig package.
+Set `pname` to the name of the Zig package.
 
 Set `version` to the version of the package.
 
@@ -26,7 +26,7 @@ Configures `zig` files to be formatted with `zig fmt`.
 {
   inputs.flakelight-zig.url = "github:accelbread/flakelight-zig";
   outputs = { flakelight-zig, ... }: flakelight-zig ./. {
-    name = "hello-world";
+    pname = "hello-world";
     version = "0.0.1";
     description = "My Zig application.";
     license = "AGPL-3.0-or-later";
