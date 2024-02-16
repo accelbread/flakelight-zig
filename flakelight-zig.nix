@@ -4,10 +4,17 @@
 
 { config, lib, src, ... }:
 let
+  inherit (builtins) toString;
   inherit (lib) assertMsg mkOption types;
 in
 {
-  options.version = mkOption { type = types.str; };
+  options = {
+    version = mkOption { type = types.str; };
+    zigFlags = mkOption {
+      type = types.listOf types.str;
+      default = [ "-Doptimize=ReleaseSafe" "-Dcpu=baseline" ];
+    };
+  };
 
   config = {
     package =
@@ -25,7 +32,7 @@ in
         buildPhase = ''
           runHook preBuild
           mkdir -p $out
-          zig build -Doptimize=ReleaseSafe -Dcpu=baseline --prefix $out
+          zig build ${toString config.zigFlags} --prefix $out
           runHook postBuild
         '';
         meta = defaultMeta;
