@@ -5,16 +5,23 @@
 { config, lib, src, flakelight, ... }:
 let
   inherit (builtins) any pathExists toString;
-  inherit (lib) assertMsg mkIf mkOption types warnIf;
+  inherit (lib) assertMsg mkIf mkOption optional types warnIf;
+  inherit (lib.types) functionTo package;
   inherit (lib.fileset) fileFilter toSource unions;
-  inherit (flakelight.types) fileset;
+  inherit (flakelight.types) fileset nullable;
 
   readZon = import ./parseZon.nix lib;
   buildZonFile = src + /build.zig.zon;
+  hasBuildZon = pathExists buildZonFile;
   buildZon =
-    if pathExists buildZonFile
+    if hasBuildZon
     then readZon buildZonFile
     else { };
+
+  linkDeps = pkgs:
+    if config.zigDependencies != null then
+      "ln -s ${config.zigDependencies pkgs} $ZIG_GLOBAL_CACHE_DIR/p"
+    else "";
 in
 warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
 {
@@ -32,6 +39,11 @@ warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
         (file: any file.hasExt [ "zig" "zon" "c" "h" ])
         src;
     };
+
+    zigDependencies = mkOption {
+      type = nullable (functionTo package);
+      default = null;
+    };
   };
 
   config = {
@@ -43,7 +55,7 @@ warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
     package =
       assert assertMsg (config.pname != null)
         "pname option must be set in flakelight config.";
-      { stdenvNoCC, zig, defaultMeta }:
+      { stdenvNoCC, zig, pkgs, defaultMeta }:
       stdenvNoCC.mkDerivation {
         inherit (config) pname version;
         src = toSource { root = src; inherit (config) fileset; };
@@ -51,7 +63,10 @@ warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
         strictDeps = true;
         dontConfigure = true;
         dontInstall = true;
-        XDG_CACHE_HOME = ".cache";
+        postPatch = ''
+          export ZIG_GLOBAL_CACHE_DIR=$(mktemp -d)
+          ${linkDeps pkgs}
+        '';
         buildPhase = ''
           runHook preBuild
           mkdir -p $out
@@ -61,7 +76,8 @@ warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
         meta = defaultMeta;
       };
 
-    devShell.packages = pkgs: with pkgs; [ zig zls ];
+    devShell.packages = pkgs: [ pkgs.zig pkgs.zls ] ++
+      (optional hasBuildZon pkgs.zon2nix);
 
     checks.test = pkgs: "HOME=$TMPDIR ${pkgs.zig}/bin/zig build test";
 

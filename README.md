@@ -11,6 +11,10 @@ Set `pname` to the name of the Zig package, if `name` not configured in
 
 Set `version` to the version of the package if `version` not in `build.zig.zon`.
 
+`zigDependencies` will have to be set if `build.zig.zon` contains dependencies.
+Set it to a function that takes the package set and returns a zig package cache
+path.
+
 `fileset` configures the fileset the package is built with. To use all files,
 set it to `./.`. Without `build.zig.zon`, The default is Zig and C files. If
 `paths` is set in `build.zig.zon`, those paths are used.
