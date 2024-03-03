@@ -4,8 +4,15 @@
 
 { config, lib, src, ... }:
 let
-  inherit (builtins) toString;
-  inherit (lib) assertMsg mkOption types;
+  inherit (builtins) pathExists toString;
+  inherit (lib) assertMsg mkIf mkOption types;
+
+  readZon = import ./parseZon.nix lib;
+  buildZonFile = src + /build.zig.zon;
+  buildZon =
+    if pathExists buildZonFile
+    then readZon buildZonFile
+    else { };
 in
 {
   options = {
