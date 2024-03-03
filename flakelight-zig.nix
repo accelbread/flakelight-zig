@@ -2,10 +2,12 @@
 # Copyright (C) 2023 Archit Gupta <archit@accelbread.com>
 # SPDX-License-Identifier: MIT
 
-{ config, lib, src, ... }:
+{ config, lib, src, flakelight, ... }:
 let
-  inherit (builtins) pathExists toString;
-  inherit (lib) assertMsg mkIf mkOption types;
+  inherit (builtins) any pathExists toString;
+  inherit (lib) assertMsg mkIf mkOption types warnIf;
+  inherit (lib.fileset) fileFilter toSource unions;
+  inherit (flakelight.types) fileset;
 
   readZon = import ./parseZon.nix lib;
   buildZonFile = src + /build.zig.zon;
@@ -14,18 +16,29 @@ let
     then readZon buildZonFile
     else { };
 in
+warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
 {
   options = {
     version = mkOption { type = types.str; };
+
     zigFlags = mkOption {
       type = types.listOf types.str;
       default = [ "-Doptimize=ReleaseSafe" "-Dcpu=baseline" ];
+    };
+
+    fileset = mkOption {
+      type = fileset;
+      default = fileFilter
+        (file: any file.hasExt [ "zig" "zon" "c" "h" ])
+        src;
     };
   };
 
   config = {
     pname = mkIf (buildZon ? name) buildZon.name;
     version = mkIf (buildZon ? version) buildZon.version;
+    fileset = mkIf (buildZon ? paths)
+      (unions (map (p: src + ("/" + p)) buildZon.paths));
 
     package =
       assert assertMsg (config.pname != null)
@@ -33,7 +46,7 @@ in
       { stdenvNoCC, zig, defaultMeta }:
       stdenvNoCC.mkDerivation {
         inherit (config) pname version;
-        inherit src;
+        src = toSource { root = src; inherit (config) fileset; };
         nativeBuildInputs = [ zig ];
         strictDeps = true;
         dontConfigure = true;
