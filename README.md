@@ -29,16 +29,59 @@ Adds checks for zig tests.
 
 Configures `zig` files to be formatted with `zig fmt`.
 
-## Example flake
+## Example flakes
+
+### Standard
 
 ```nix
 {
+  description = "My Zig application.";
+  inputs.flakelight-zig.url = "github:accelbread/flakelight-zig";
+  outputs = { flakelight-zig, ... }: flakelight-zig ./. {
+    license = "AGPL-3.0-or-later";
+  };
+}
+```
+
+### When `build.zig` sets `preferred_optimize_mode`
+
+```nix
+{
+  description = "My Zig application.";
+  inputs.flakelight-zig.url = "github:accelbread/flakelight-zig";
+  outputs = { flakelight-zig, ... }: flakelight-zig ./. {
+    license = "AGPL-3.0-or-later";
+    zigFlags = [ "-Dcpu=baseline" "-Drelease" ];
+  };
+}
+```
+
+### Without a `build.zig.zon`
+
+```nix
+{
+  description = "My Zig application.";
   inputs.flakelight-zig.url = "github:accelbread/flakelight-zig";
   outputs = { flakelight-zig, ... }: flakelight-zig ./. {
     pname = "hello-world";
     version = "0.0.1";
-    description = "My Zig application.";
     license = "AGPL-3.0-or-later";
+  };
+}
+```
+
+### When `build.zig.zon` has dependencies
+
+Use `zon2nix` to generate `deps.nix` (`zon2nix` is available in the devShell if
+the flake has a `build.zig.zon`). The `zon2nix` output can be used as follows:
+
+```nix
+{
+  description = "My Zig application.";
+  inputs.flakelight-zig.url = "github:accelbread/flakelight-zig";
+  outputs = { flakelight-zig, ... }: flakelight-zig ./. {
+    license = "AGPL-3.0-or-later";
+    zigDependencies = pkgs: pkgs.callPackage ./deps.nix {};
   };
 }
 ```
