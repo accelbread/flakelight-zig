@@ -24,6 +24,9 @@ in
   };
 
   config = {
+    pname = mkIf (buildZon ? name) buildZon.name;
+    version = mkIf (buildZon ? version) buildZon.version;
+
     package =
       assert assertMsg (config.pname != null)
         "pname option must be set in flakelight config.";

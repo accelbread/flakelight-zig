@@ -4,11 +4,12 @@ Zig module for [flakelight][1].
 
 [1]: https://github.com/nix-community/flakelight
 
-## Required options
+## Options
 
-Set `pname` to the name of the Zig package.
+Set `pname` to the name of the Zig package, if `name` not configured in
+`build.zig.zon`.
 
-Set `version` to the version of the package.
+Set `version` to the version of the package if `version` not in `build.zig.zon`.
 
 ## Configured options
 
