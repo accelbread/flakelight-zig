@@ -1,12 +1,8 @@
 {
   description = "Template Zig application.";
-  inputs = {
-    nixpkgs.url = "nixpkgs/nixos-unstable";
-    flakelight-zig.url = "github:accelbread/flakelight-zig";
-  };
-  outputs = { flakelight-zig, ... }@inputs:
+  inputs.flakelight-zig.url = "github:accelbread/flakelight-zig";
+  outputs = { flakelight-zig, ... }:
     flakelight-zig ./. {
-      inherit inputs;
       pname = "hello-world";
       version = "0.0.1";
       license = "AGPL-3.0-or-later";
