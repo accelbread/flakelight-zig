@@ -9,7 +9,7 @@ rec {
     description = "Template Zig application.";
     welcomeText = ''
       # Flakelight Zig template
-      To use, run `nix develop -c zig init-exe`.
+      To use, run `nix develop -c zig init`.
     '';
   };
 }
