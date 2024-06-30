@@ -1,53 +1,51 @@
 lib:
 let
-  inherit (builtins) deepSeq head length listToAttrs match readFile
-    replaceStrings tail tryEval;
-  inherit (lib) findFirst fix foldl' last nameValuePair;
+  inherit (builtins) head length listToAttrs match readFile;
+  inherit (lib) concatLists concatStrings escapeRegex findFirst fix foldl' last
+    nameValuePair;
 
   comb = {
     any = parsers: str: findFirst
-      (v: (tryEval (deepSeq v v)).success)
-      (throw "failed to match any parser")
+      (v: ! v ? error)
+      { error = "failed to match any parser"; }
       (map (p: p str) parsers);
 
     apply = f: parser: str:
       let v = parser str; in
-      assert v ? value;
-      v // { value = f v.value; };
+      if v ? error then v else
+        assert v ? value;
+        v // { value = f v.value; };
 
-    seq = parsers: str:
-      let
-        ret = foldl'
-          (a: p:
-            let v = p a.rest; in {
-              value = a.value ++ (if v ? value then [ v.value ] else [ ]);
-              rest = v.rest;
-            })
-          { value = [ ]; rest = str; }
-          parsers;
-      in
-      if ret.value == [ ]
-      then { inherit (ret) rest; }
-      else ret;
+    quiet = parser: str:
+      let v = parser str; in
+      if v ? error then v else
+      { inherit (v) rest; };
+
+    seq = parsers: str: foldl'
+      (a: p:
+        if a ? error then a else
+        let v = p a.rest; in if v ? error then v else {
+          value = a.value ++ (if v ? value then [ v.value ] else [ ]);
+          rest = v.rest;
+        })
+      { value = [ ]; rest = str; }
+      parsers;
 
     seq1 = parsers: str:
       comb.apply (v: assert length v == 1; head v) (comb.seq parsers) str;
 
     maybe = parser: str:
       let v = parser str; in
-      if (tryEval (deepSeq v v)).success
-      then v
-      else { rest = str; };
+      if ! v ? error then v else { rest = str; };
 
     many = parser: fix (self: str:
       let v = parser str; in
-      if (tryEval (deepSeq v v)).success
-      then
+      if v ? error then { value = [ ]; rest = str; }
+      else
         let next = self v.rest; in {
           value = (if v ? value then [ v.value ] else [ ]) ++ next.value;
           inherit (next) rest;
-        }
-      else { value = [ ]; rest = str; });
+        });
   };
 
   parseRegex = rx: type: str:
@@ -56,16 +54,26 @@ let
       len = length m;
     in
     if m == null
-    then throw "failed to match ${type}"
+    then { error = "failed to match ${type}"; }
     else if len == 1 then { rest = last m; }
     else { value = head m; rest = last m; };
+
+  parseStr = s: parseRegex (escapeRegex s) "`${s}`";
+
+  parseStrRep = s: rep: str:
+    let v = parseStr s str; in
+    if v ? error then v else (v // { value = rep; });
 
   parseEnd = str:
     if str == ""
     then { rest = ""; }
-    else throw "failed to match end of string";
+    else { error = "failed to match end of string"; };
 
-  parseWhitespace = parseRegex "[ \n]*" "whitespace";
+  parseWhitespace = comb.quiet (comb.many (comb.any [
+    (parseStr " ")
+    (parseStr "\n")
+    (parseRegex "//[^\n]*\n" "comment")
+  ]));
 
   parseZonObj = comb.any [
     parseZonStruct
@@ -73,60 +81,61 @@ let
     parseZonStr
   ];
 
-  parseZonAnonLitOpen = parseRegex "\\.\\{" "open anonymous literal";
-
-  parseZonAnonLitClose = parseRegex "}" "close anonymous literal";
-
-  parseComma = parseRegex "," "comma";
-
-  parseZonAnonStructLitOf = parser: comb.apply (v: head v ++ tail v) (comb.seq [
-    parseZonAnonLitOpen
+  parseZonAnonStructLitOf = parser: comb.apply concatLists (comb.seq [
+    (parseStr ".{")
     (comb.many (comb.seq1 [
       parseWhitespace
       parser
       parseWhitespace
-      parseComma
+      (parseStr ",")
     ]))
-    (comb.maybe (comb.seq1 [
+    (comb.maybe (comb.seq [
       parseWhitespace
       parser
     ]))
     parseWhitespace
-    parseZonAnonLitClose
+    (parseStr "}")
   ]);
 
   parseZonTuple = parseZonAnonStructLitOf parseZonObj;
 
-  parsePeriod = parseRegex "." "period";
+  parseZonIdent = parseRegex "([a-zA-Z_][a-zA-Z0-9_]*)" "identifier";
 
-  parseZonIdentifier = parseRegex "([a-zA-Z_][a-zA-Z0-9_]*)" "identifier";
-
-  parseEquals = parseRegex "=" "equals";
-
-  mkNVPair = v: nameValuePair (head v) (last v);
-
-  parseZonStructField = comb.apply mkNVPair (comb.seq [
-    parsePeriod
-    parseZonIdentifier
-    parseWhitespace
-    parseEquals
-    parseWhitespace
-    parseZonObj
-  ]);
+  parseZonStructField = comb.apply (v: nameValuePair (head v) (last v))
+    (comb.seq [
+      (parseStr ".")
+      parseZonIdent
+      parseWhitespace
+      (parseStr "=")
+      parseWhitespace
+      parseZonObj
+    ]);
 
   parseZonStruct = comb.apply listToAttrs
     (parseZonAnonStructLitOf parseZonStructField);
 
-  unescapeZonStr =
-    let
-      invalid = throw "unhandled escape sequence";
-    in
-    replaceStrings
-      [ "\\n" "\\r" "\\t" "\\\\" "\\'" "\\\"" "\\x" "\\u{" ]
-      [ "\n" "\r" "\t" "\\" "'" "\"" invalid invalid ];
+  parseEscapeSeq = comb.seq1 [
+    (parseRegex "\\\\" "backslash")
+    (comb.any [
+      (parseStrRep "\\" "\\")
+      (parseStrRep "n" "\n")
+      (parseStrRep "r" "\r")
+      (parseStrRep "t" "\t")
+      (parseStrRep "'" "'")
+      (parseStrRep "\"" "\"")
+      (parseStrRep "x" (throw "unhandled escape sequence"))
+      (parseStrRep "u" (throw "unhandled escape sequence"))
+    ])
+  ];
 
-  parseZonStr = comb.apply unescapeZonStr
-    (parseRegex "\"(([^\"\\\\]|\\\\[^\\\\]|\\\\\\\\)*)\"" "string");
+  parseZonStr = comb.apply concatStrings (comb.seq1 [
+    (parseStr "\"")
+    (comb.many (comb.any [
+      (parseRegex "([^\"\n\\])" "string char")
+      parseEscapeSeq
+    ]))
+    (parseStr "\"")
+  ]);
 
   parseZon = comb.seq1 [
     parseWhitespace
@@ -134,13 +143,9 @@ let
     parseWhitespace
     parseEnd
   ];
-
-  fromZon = str: (parseZon str).value;
 in
 path:
 let
-  val = fromZon (readFile path);
-  result = tryEval (deepSeq val val);
+  v = parseZon (readFile path);
 in
-if result.success then val
-else throw "failed to parse ${path}"
+if ! v ? error then v.value else throw "failed to parse ${path}"
