@@ -24,7 +24,7 @@ jobs:
       - run: |
           cd templates/zig-bin
           nix flake update --override-input flakelight-zig ../..
-          nix develop -c zig init-exe
+          nix develop -c zig init
           git add .
           nix flake check --all-systems
       - run: git push
