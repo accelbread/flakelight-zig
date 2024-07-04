@@ -6,7 +6,7 @@
 let
   inherit (builtins) pathExists toString;
   inherit (lib) mkIf mkOption types warnIf;
-  inherit (lib.types) functionTo package;
+  inherit (lib.types) functionTo listOf package str;
   inherit (lib.fileset) toSource unions;
   inherit (flakelight.types) nullable;
 
@@ -24,7 +24,7 @@ warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
 {
   options = {
     zigFlags = mkOption {
-      type = types.listOf types.str;
+      type = listOf str;
       default = [ "--release=safe" "-Dcpu=baseline" ];
     };
 
@@ -32,11 +32,16 @@ warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
       type = nullable (functionTo package);
       default = null;
     };
+
+    zigSystemLibs = mkOption {
+      type = functionTo (listOf package);
+      default = _: [ ];
+    };
   };
 
   config = {
     package = mkIf hasBuildZon
-      ({ stdenvNoCC, zig, pkgs, defaultMeta }:
+      ({ stdenvNoCC, zig, pkg-config, pkgs, defaultMeta }:
         stdenvNoCC.mkDerivation {
           pname = buildZon.name;
           version = buildZon.version;
@@ -44,7 +49,8 @@ warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
             root = src;
             fileset = unions (map (p: src + ("/" + p)) buildZon.paths);
           };
-          nativeBuildInputs = [ zig ];
+          nativeBuildInputs = [ zig pkg-config ];
+          buildInputs = config.zigSystemLibs pkgs;
           strictDeps = true;
           dontConfigure = true;
           dontInstall = true;
@@ -61,7 +67,8 @@ warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
           meta = defaultMeta;
         });
 
-    devShell.packages = pkgs: [ pkgs.zig pkgs.zls pkgs.zon2nix ];
+    devShell.packages = pkgs: (with pkgs; [ zig zls pkg-config zon2nix ])
+      ++ config.zigSystemLibs pkgs;
 
     checks.test = pkgs: "HOME=$TMPDIR ${pkgs.zig}/bin/zig build test";
 
