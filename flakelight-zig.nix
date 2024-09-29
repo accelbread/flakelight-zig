@@ -5,7 +5,7 @@
 { config, lib, src, flakelight, ... }:
 let
   inherit (builtins) pathExists toString;
-  inherit (lib) mkIf mkOption types warnIf;
+  inherit (lib) mkIf mkOption warnIf;
   inherit (lib.types) functionTo listOf package str;
   inherit (lib.fileset) toSource unions;
   inherit (flakelight.types) nullable;
@@ -72,6 +72,8 @@ warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
 
     checks.test = pkgs: "HOME=$TMPDIR ${pkgs.zig}/bin/zig build test";
 
-    formatters."*.zig" = "zig fmt";
+    formatters = pkgs: {
+      "*.zig" = "${pkgs.zig} fmt";
+    };
   };
 }
