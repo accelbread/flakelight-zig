@@ -67,7 +67,7 @@ warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
           meta = defaultMeta;
         }));
 
-    devShell.packages = pkgs: (with pkgs; [ zig zls pkg-config zon2nix ])
+    devShell.packages = pkgs: (with pkgs; [ zig zls pkg-config ])
       ++ config.zigSystemLibs pkgs;
 
     checks.test = pkgs: ''
