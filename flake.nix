@@ -7,5 +7,6 @@
   outputs = { flakelight, ... }: flakelight ./. {
     imports = [ flakelight.flakelightModules.flakelightModule ];
     flakelightModule = ./flakelight-zig.nix;
+    lib = { lib, ... }: { parseZon = import ./parseZon.nix lib; };
   };
 }
