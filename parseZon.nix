@@ -99,7 +99,10 @@ let
 
   parseZonTuple = parseZonAnonStructLitOf parseZonObj;
 
-  parseZonIdent = parseRegex "([a-zA-Z_][a-zA-Z0-9_]*)" "identifier";
+  parseZonIdent = comb.any [
+    (parseRegex "([a-zA-Z_][a-zA-Z0-9_]*)" "identifier")
+    (comb.seq1 [ (parseStr "@") parseZonStr ])
+  ];
 
   parseZonStructField = comb.apply (v: nameValuePair (head v) (last v))
     (comb.seq [
