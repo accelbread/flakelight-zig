@@ -70,7 +70,11 @@ warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
     devShell.packages = pkgs: (with pkgs; [ zig zls pkg-config zon2nix ])
       ++ config.zigSystemLibs pkgs;
 
-    checks.test = pkgs: "HOME=$TMPDIR ${pkgs.zig}/bin/zig build test";
+    checks.test = pkgs: ''
+      export ZIG_GLOBAL_CACHE_DIR=$(mktemp -d)
+      ${linkDeps pkgs}
+      ${pkgs.zig}/bin/zig build test
+    '';
 
     formatters = pkgs: {
       "*.zig" = "${pkgs.zig} fmt";
