@@ -4,7 +4,7 @@
 
 { config, lib, src, flakelight, ... }:
 let
-  inherit (builtins) pathExists toString;
+  inherit (builtins) deepSeq pathExists toString;
   inherit (lib) mkIf mkOption warnIf;
   inherit (lib.types) functionTo listOf package str;
   inherit (lib.fileset) toSource unions;
@@ -41,7 +41,7 @@ warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
 
   config = {
     package = mkIf hasBuildZon
-      ({ stdenvNoCC, zig, pkg-config, pkgs, defaultMeta }:
+      (deepSeq buildZon ({ stdenvNoCC, zig, pkg-config, pkgs, defaultMeta }:
         stdenvNoCC.mkDerivation {
           pname = buildZon.name;
           version = buildZon.version;
@@ -65,7 +65,7 @@ warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
             runHook postBuild
           '';
           meta = defaultMeta;
-        });
+        }));
 
     devShell.packages = pkgs: (with pkgs; [ zig zls pkg-config zon2nix ])
       ++ config.zigSystemLibs pkgs;
