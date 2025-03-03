@@ -10,9 +10,15 @@ Package metadata is read from `build.zig.zon`.
 
 `zigFlags` allows overriding of the flags passed to `zig build`.
 
-`zigDependencies` will have to be set if `build.zig.zon` contains dependencies.
-Set it to a function that takes the package set and returns a zig package cache
-path.
+`zigPackages` allows providing Zig packages that the project depends on. Set it
+to a function that takes the package set and returns an attrset of zig packages.
+The attr names should be the zig package hash. This may be left unset if the
+project has no dependencies or if all the dependencies use the
+`git+<url>#<git-rev>` package url format.
+
+`zigSystemLibs` allows adding libraries needed for building the project. It
+should be a set to a function that takes the package set and returns packages to
+be added to the main package's nativeBuildInputs and the to the devshell.
 
 ## Configured options
 
