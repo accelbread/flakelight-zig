@@ -4,19 +4,23 @@
 
 { config, lib, src, ... }:
 let
-  inherit (builtins) attrValues deepSeq pathExists toString;
-  inherit (lib) mkIf mkMerge mkOption warnIf;
+  inherit (builtins) attrValues deepSeq elemAt fetchGit listToAttrs match
+    pathExists toString;
+  inherit (lib) filter mkIf mkMerge mkOption pipe warnIf;
   inherit (lib.types) functionTo lazyAttrsOf listOf package str;
   inherit (lib.fileset) toSource unions;
 
+  inherit (config) zigToolchain zigFlags zigPackages zigSystemLibs;
+
   strictEval = x: deepSeq x x;
   readZon = import ./parseZon.nix lib;
+
 
   buildZonFile = src + /build.zig.zon;
   hasBuildZon = pathExists buildZonFile;
   buildZon = strictEval (readZon buildZonFile);
 
-  pkgDir = pkgs: pkgs.linkFarm "zig-packages" (config.zigPackages pkgs);
+  pkgDir = pkgs: pkgs.linkFarm "zig-packages" (zigPackages pkgs);
   makeZigCacheDir = pkgs: ''
     export ZIG_GLOBAL_CACHE_DIR=$(mktemp -d)
     ln -s ${pkgDir pkgs} $ZIG_GLOBAL_CACHE_DIR/p
@@ -25,23 +29,23 @@ let
   dependencies = buildZon.dependencies or { };
 
   # zon deps with git urls can be automatically converted into nix drvs
-  gitDependencies = pkgs: lib.pipe dependencies [
-    lib.attrValues
-    (lib.filter (d: d ? url))
+  gitDependencies = pkgs: pipe dependencies [
+    attrValues
+    (filter (d: d ? url))
     (map (d: {
       name = d.hash;
-      captures = builtins.match "git\\+(.*)#([a-z0-9]+)" d.url;
+      captures = match "git\\+(.*)#([a-z0-9]+)" d.url;
     }))
-    (lib.filter (d: d.captures != null))
+    (filter (d: d.captures != null))
     (map (d: {
       inherit (d) name;
-      value = builtins.fetchGit {
-        url = builtins.elemAt d.captures 0;
-        rev = builtins.elemAt d.captures 1;
+      value = fetchGit {
+        url = elemAt d.captures 0;
+        rev = elemAt d.captures 1;
         shallow = true;
       };
     }))
-    builtins.listToAttrs
+    listToAttrs
   ];
 in
 warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
@@ -80,8 +84,8 @@ warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
             root = src;
             fileset = unions (map (p: src + ("/" + p)) buildZon.paths);
           };
-          nativeBuildInputs = [ (config.zigToolchain pkgs).zig pkg-config ];
-          buildInputs = config.zigSystemLibs pkgs;
+          nativeBuildInputs = [ (zigToolchain pkgs).zig pkg-config ];
+          buildInputs = zigSystemLibs pkgs;
           strictDeps = true;
           dontConfigure = true;
           dontInstall = true;
@@ -91,7 +95,7 @@ warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
           buildPhase = ''
             runHook preBuild
             mkdir -p $out
-            zig build ${toString config.zigFlags} --prefix $out
+            zig build ${toString zigFlags} --prefix $out
             runHook postBuild
           '';
           meta = defaultMeta;
@@ -99,17 +103,17 @@ warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
 
       checks.test = pkgs: ''
         ${makeZigCacheDir pkgs}
-        ${(config.zigToolchain pkgs).zig}/bin/zig build test
+        ${(zigToolchain pkgs).zig}/bin/zig build test
       '';
     })
 
     {
       devShell.packages = pkgs: (with pkgs; [ pkg-config ])
-        ++ attrValues (config.zigToolchain pkgs)
+        ++ attrValues (zigToolchain pkgs)
         ++ config.zigSystemLibs pkgs;
 
       formatters = pkgs: {
-        "*.zig" = "${(config.zigToolchain pkgs).zig} fmt";
+        "*.zig" = "${(zigToolchain pkgs).zig} fmt";
       };
     }
   ];
