@@ -20,6 +20,10 @@ project has no dependencies or if all the dependencies use the
 should be a set to a function that takes the package set and returns packages to
 be added to the main package's nativeBuildInputs and the to the devshell.
 
+`zigToolchain` allows changing the zig and zls packages used. It can be set to a
+function that takes the package set and returns an attrset with attrs for zig
+and zls.
+
 ## Configured options
 
 Sets `package` to the zig project at the flake source.

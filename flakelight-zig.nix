@@ -4,7 +4,7 @@
 
 { config, lib, src, ... }:
 let
-  inherit (builtins) deepSeq pathExists toString;
+  inherit (builtins) attrValues deepSeq pathExists toString;
   inherit (lib) mkIf mkMerge mkOption warnIf;
   inherit (lib.types) functionTo lazyAttrsOf listOf package str;
   inherit (lib.fileset) toSource unions;
@@ -47,6 +47,11 @@ in
 warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
 {
   options = {
+    zigToolchain = mkOption {
+      type = functionTo (lazyAttrsOf package);
+      default = pkgs: { inherit (pkgs) zig zls; };
+    };
+
     zigFlags = mkOption {
       type = listOf str;
       default = [ "--release=safe" "-Dcpu=baseline" ];
@@ -67,7 +72,7 @@ warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
     (mkIf hasBuildZon {
       pname = buildZon.name;
 
-      package = { stdenvNoCC, zig, pkg-config, pkgs, defaultMeta }:
+      package = { stdenvNoCC, pkg-config, pkgs, defaultMeta }:
         stdenvNoCC.mkDerivation {
           pname = buildZon.name;
           version = buildZon.version;
@@ -75,7 +80,7 @@ warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
             root = src;
             fileset = unions (map (p: src + ("/" + p)) buildZon.paths);
           };
-          nativeBuildInputs = [ zig pkg-config ];
+          nativeBuildInputs = [ (config.zigToolchain pkgs).zig pkg-config ];
           buildInputs = config.zigSystemLibs pkgs;
           strictDeps = true;
           dontConfigure = true;
@@ -94,16 +99,17 @@ warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
 
       checks.test = pkgs: ''
         ${makeZigCacheDir pkgs}
-        ${pkgs.zig}/bin/zig build test
+        ${(config.zigToolchain pkgs).zig}/bin/zig build test
       '';
     })
 
     {
-      devShell.packages = pkgs: (with pkgs; [ zig zls pkg-config ])
+      devShell.packages = pkgs: (with pkgs; [ pkg-config ])
+        ++ attrValues (config.zigToolchain pkgs)
         ++ config.zigSystemLibs pkgs;
 
       formatters = pkgs: {
-        "*.zig" = "${pkgs.zig} fmt";
+        "*.zig" = "${(config.zigToolchain pkgs).zig} fmt";
       };
     }
   ];
