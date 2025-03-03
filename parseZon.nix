@@ -79,6 +79,8 @@ let
     parseZonStruct
     parseZonTuple
     parseZonStr
+    parseZonIdent
+    parseZonHexInt
   ];
 
   parseZonAnonStructLitOf = parser: comb.apply concatLists (comb.seq [
@@ -99,14 +101,17 @@ let
 
   parseZonTuple = parseZonAnonStructLitOf parseZonObj;
 
-  parseZonIdent = comb.any [
-    (parseRegex "([a-zA-Z_][a-zA-Z0-9_]*)" "identifier")
-    (comb.seq1 [ (parseStr "@") parseZonStr ])
+  parseZonIdent = comb.seq1 [
+    (parseStr ".")
+    parseWhitespace
+    (comb.any [
+      (parseRegex "([a-zA-Z_][a-zA-Z0-9_]*)" "identifier")
+      (comb.seq1 [ (parseStr "@") parseZonStr ])
+    ])
   ];
 
   parseZonStructField = comb.apply (v: nameValuePair (head v) (last v))
     (comb.seq [
-      (parseStr ".")
       parseZonIdent
       parseWhitespace
       (parseStr "=")
@@ -139,6 +144,9 @@ let
     ]))
     (parseStr "\"")
   ]);
+
+  parseZonHexInt = comb.apply lib.fromHexString
+    (parseRegex "0x([0-9a-fA-F]+)" "hex int literal");
 
   parseZon = comb.seq1 [
     parseWhitespace
