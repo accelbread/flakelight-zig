@@ -5,8 +5,9 @@
 {
   inputs.flakelight.url = "github:nix-community/flakelight";
   outputs = { flakelight, ... }: flakelight ./. {
-    imports = [ flakelight.flakelightModules.flakelightModule ];
+    imports = [ flakelight.flakelightModules.extendFlakelight ];
     flakelightModule = ./flakelight-zig.nix;
     lib = { lib, ... }: { parseZon = import ./parseZon.nix lib; };
+    templates = import ./templates;
   };
 }
