@@ -4,10 +4,16 @@
 
 {
   inputs.flakelight.url = "github:nix-community/flakelight";
-  outputs = { flakelight, ... }: flakelight ./. {
-    imports = [ flakelight.flakelightModules.extendFlakelight ];
-    flakelightModule = ./flakelight-zig.nix;
-    lib = { lib, ... }: { parseZon = import ./parseZon.nix lib; };
-    templates = import ./templates;
-  };
+  outputs =
+    { flakelight, ... }:
+    flakelight ./. {
+      imports = [ flakelight.flakelightModules.extendFlakelight ];
+      flakelightModule = ./flakelight-zig.nix;
+      lib = { lib, ... }: { parseZon = import ./parseZon.nix lib; };
+      templates = import ./templates;
+      formatters = { pkgs, lib, ... }: {
+        "*.nix" = "${lib.getExe pkgs.nixfmt} -w78";
+        "*.md" = "${lib.getExe pkgs.mdformat} --wrap 80";
+      };
+    };
 }

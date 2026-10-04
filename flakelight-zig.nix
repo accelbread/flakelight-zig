@@ -2,19 +2,49 @@
 # Copyright (C) 2023 Archit Gupta <archit@accelbread.com>
 # SPDX-License-Identifier: MIT
 
-{ config, lib, src, ... }:
+{
+  config,
+  lib,
+  src,
+  ...
+}:
 let
-  inherit (builtins) attrValues deepSeq elemAt fetchGit listToAttrs match
-    pathExists toString;
-  inherit (lib) filter mkIf mkMerge mkOption pipe warnIf;
-  inherit (lib.types) functionTo lazyAttrsOf listOf package str;
+  inherit (builtins)
+    attrValues
+    deepSeq
+    elemAt
+    fetchGit
+    listToAttrs
+    match
+    pathExists
+    toString
+    ;
+  inherit (lib)
+    filter
+    mkIf
+    mkMerge
+    mkOption
+    pipe
+    warnIf
+    ;
+  inherit (lib.types)
+    functionTo
+    lazyAttrsOf
+    listOf
+    package
+    str
+    ;
   inherit (lib.fileset) toSource unions;
 
-  inherit (config) zigToolchain zigFlags zigPackages zigSystemLibs;
+  inherit (config)
+    zigToolchain
+    zigFlags
+    zigPackages
+    zigSystemLibs
+    ;
 
   strictEval = x: deepSeq x x;
   readZon = import ./parseZon.nix lib;
-
 
   buildZonFile = src + /build.zig.zon;
   hasBuildZon = pathExists buildZonFile;
@@ -29,27 +59,28 @@ let
   dependencies = buildZon.dependencies or { };
 
   # zon deps with git urls can be automatically converted into nix drvs
-  gitDependencies = pkgs: pipe dependencies [
-    attrValues
-    (filter (d: d ? url))
-    (map (d: {
-      name = d.hash;
-      captures = match "git\\+(.*)#([a-z0-9]+)" d.url;
-    }))
-    (filter (d: d.captures != null))
-    (map (d: {
-      inherit (d) name;
-      value = fetchGit {
-        url = elemAt d.captures 0;
-        rev = elemAt d.captures 1;
-        shallow = true;
-      };
-    }))
-    listToAttrs
-  ];
+  gitDependencies =
+    pkgs:
+    pipe dependencies [
+      attrValues
+      (filter (d: d ? url))
+      (map (d: {
+        name = d.hash;
+        captures = match "git\\+(.*)#([a-z0-9]+)" d.url;
+      }))
+      (filter (d: d.captures != null))
+      (map (d: {
+        inherit (d) name;
+        value = fetchGit {
+          url = elemAt d.captures 0;
+          rev = elemAt d.captures 1;
+          shallow = true;
+        };
+      }))
+      listToAttrs
+    ];
 in
-warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
-{
+warnIf (!builtins ? readFileType) "Unsupported Nix version in use." {
   options = {
     zigToolchain = mkOption {
       type = functionTo (lazyAttrsOf package);
@@ -58,7 +89,10 @@ warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
 
     zigFlags = mkOption {
       type = listOf str;
-      default = [ "--release=safe" "-Dcpu=baseline" ];
+      default = [
+        "--release=safe"
+        "-Dcpu=baseline"
+      ];
     };
 
     zigPackages = mkOption {
@@ -76,7 +110,13 @@ warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
     (mkIf hasBuildZon {
       pname = buildZon.name;
 
-      package = { stdenvNoCC, pkg-config, pkgs, defaultMeta }:
+      package =
+        {
+          stdenvNoCC,
+          pkg-config,
+          pkgs,
+          defaultMeta,
+        }:
         stdenvNoCC.mkDerivation {
           pname = buildZon.name;
           version = buildZon.version;
@@ -84,7 +124,10 @@ warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
             root = src;
             fileset = unions (map (p: src + ("/" + p)) buildZon.paths);
           };
-          nativeBuildInputs = [ (zigToolchain pkgs).zig pkg-config ];
+          nativeBuildInputs = [
+            (zigToolchain pkgs).zig
+            pkg-config
+          ];
           buildInputs = zigSystemLibs pkgs;
           strictDeps = true;
           dontConfigure = true;
@@ -108,7 +151,9 @@ warnIf (! builtins ? readFileType) "Unsupported Nix version in use."
     })
 
     {
-      devShell.packages = pkgs: (with pkgs; [ pkg-config ])
+      devShell.packages =
+        pkgs:
+        (with pkgs; [ pkg-config ])
         ++ attrValues (zigToolchain pkgs)
         ++ config.zigSystemLibs pkgs;
 

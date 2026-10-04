@@ -2,8 +2,6 @@
 
 Zig module for [flakelight][1].
 
-[1]: https://github.com/nix-community/flakelight
-
 Package metadata is read from `build.zig.zon`.
 
 ## Options
@@ -74,3 +72,5 @@ package hash. For example:
 If all of your dependencies are git deps, then the above can be extracted from
 `build.zig.zon` with Nix code by using `flakelight-zig.lib.parseZon` to read
 `build.zig.zon` into a Nix attrset.
+
+[1]: https://github.com/nix-community/flakelight
